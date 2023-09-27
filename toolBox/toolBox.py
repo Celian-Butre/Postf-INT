@@ -21,7 +21,7 @@ def fillBG():
 
 class Sprite:
     global spriteList
-    def __init__(self, coords = (0,0), visible = False, texture = "BlackCircle.png", size = (-1,-1), isButton = False, shape = "circle", onClick = lambda : print("clicked !")):
+    def __init__(self, coords = (0,0), visible = False, texture = "BlackCircle.png", size = (-1,-1), isButton = False, shape = "circle", onPress = lambda : print("pressed !"), onClick = lambda : print("clicked !")):
         spriteList.append(self)
         self.coords = coords
         self.visible = visible
@@ -39,9 +39,11 @@ class Sprite:
         self.isButton = isButton
         self.shape = shape
 
+        self.onPress = onPress
         self.onClick = onClick
 
-        self.released = True #pour éviter qu'un bouton soit cliquer pleins de fois à la suite
+        self.notPressedDown = True #To make sur a buttons action doesn't happen every frame it is being pressed down
+        self.released = True #To be able to do an action upon a click's release
 
     def center(self):
         """
@@ -188,21 +190,54 @@ class Sprite:
         if newSize is not None:
             self.resize(newSize)
 
-    def clickChecker(self, mouseCoords):
+    def pressChecker(self, mouseCoords):
         """
-        Checks if the mouse is clicking on the sprite and activates the onClick function in that case
+        (Prefer using clickChecker, but might come in use)
+        Checks if the mouse pressed on the sprite and activates the onClick function in that case
+        Activates as soon as the mouse is pressed, not released
         """
-        clicked = False
-        if self.isButton and self.released:
+        pressed = False
+        if self.isButton and self.notPressedDown:
             if self.shape == "circle":
                 if ((self.center()[0]-mouseCoords[0])**2 + (self.center()[1]-mouseCoords[1])**2)**0.5 < self.size[0]/2:
-                    clicked = True
+                    pressed = True
             if self.shape == "rectangle":
                 if mouseCoords[0] >= self.middleLeft[0] and mouseCoords[0] <= self.middleRight[0] and mouseCoords[1] >= self.middleTop[1] and mouseCoords[1] <= self.middleBottom[1]:
-                    clicked = True
-            if clicked:
-                self.released = False
-                self.onClick()
+                    pressed = True
+            if pressed:
+                self.notPressedDown = False
+                self.onPress()
+
+    def clickChecker(self, mouseCoords, mousePressed):
+        """
+        Checks if the mouse clicked on the sprite and activates the onClick function in that case
+        Activates when the mouse is released (and still above the hitbox)
+        """
+        if self.released and mousePressed: #If mouse has JUST been pressed
+            correctPosition = False
+            if self.isButton:
+                if self.shape == "circle":
+                    if ((self.center()[0]-mouseCoords[0])**2 + (self.center()[1]-mouseCoords[1])**2)**0.5 < self.size[0]/2:
+                        correctPosition = True
+                if self.shape == "rectangle":
+                    if mouseCoords[0] >= self.middleLeft[0] and mouseCoords[0] <= self.middleRight[0] and mouseCoords[1] >= self.middleTop[1] and mouseCoords[1] <= self.middleBottom[1]:
+                        correctPosition = True
+                if correctPosition:
+                    self.released = False
+                    #self.onClick() #Click happens only upon correct release
+        elif not self.released and not mousePressed: #if mouse has JUST been released
+            correctPosition = False
+            if self.isButton :
+                if self.shape == "circle":
+                    if ((self.center()[0]-mouseCoords[0])**2 + (self.center()[1]-mouseCoords[1])**2)**0.5 < self.size[0]/2:
+                        correctPosition = True
+                if self.shape == "rectangle":
+                    if mouseCoords[0] >= self.middleLeft[0] and mouseCoords[0] <= self.middleRight[0] and mouseCoords[1] >= self.middleTop[1] and mouseCoords[1] <= self.middleBottom[1]:
+                        correctPosition = True
+                if correctPosition:
+                    self.onClick()
+                    
+
 
 
 def refreshSprites():
@@ -218,17 +253,32 @@ def refreshSprites():
             sprite.rect = sprite.rect.move(sprite.coords)
             screen.blit(sprite.texture, sprite.rect)
 
-def clickingBuisiness():
+def pressingBuisiness():
     """
-    Does all the checks and updates related to clicking a sprite
+    Does all the checks and updates related to pressing a sprite (no release needed)
     """
     global mouseIsClicked, mousePosition
     if mouseIsClicked:
         for sprite in spriteList:
-            sprite.clickChecker(mousePosition)
+            sprite.pressChecker(mousePosition)
     else:
         for sprite in spriteList:
-            sprite.released = True
+            sprite.notPressedDown = True
+
+def clickingBuisiness():
+    """
+    Does all the checks and updates related to clicking a sprite (correct release needed)
+    """
+    global mouseIsClicked, mousePosition
+    for sprite in spriteList:
+        sprite.clickChecker(mousePosition, mouseIsClicked) #set to pressed or released depening on mouseIsClicked
+    if not mouseIsClicked:
+        for sprite in spriteList:
+            sprite.released = True #release all once mouse is released
+
+def clickNpress():
+    pressingBuisiness()
+    clickingBuisiness()
 
 mouseIsClicked = False
 mousePosition = (0,0)
@@ -250,8 +300,8 @@ while True:
     if frameCount == 0:
         testBall = Sprite((300,300), True, size = (100,100), isButton = True)
         print("did a thing")
-        testBall.smoothSlideThird((600,600), slideFrameAmount = 40)
-        testBall.resizeSlide((200,200), slideFrameAmount = 60)
+        #testBall.smoothSlideThird((600,600), slideFrameAmount = 40)
+        #testBall.resizeSlide((200,200), slideFrameAmount = 60)
         #testBall.resize((200,200))
         print("lol")
 
@@ -263,7 +313,7 @@ while True:
         print("other thing")
     print(frameCount)
     refreshSprites() 
-    clickingBuisiness
+    clickNpress()
 
     pygame.display.flip()
     time.sleep(1/60)
