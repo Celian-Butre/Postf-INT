@@ -1,3 +1,10 @@
+"""
+À faire :  
+    mettre du delay sur slide et resize
+    à mettre de l'idle animation
+"""
+
+
 import time, pygame
 pygame.init()
 WIDTH, HEIGHT = 2200, 1100
@@ -10,6 +17,7 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 spriteList = []
 buttonList = []
 
+exampleAnimation = [["testDogFrames/dog_astropad-0.png", 5],["testDogFrames/dog_astropad-1.png", 5],["testDogFrames/dog_astropad-2.png", 5],["testDogFrames/dog_astropad-3.png", 5],["testDogFrames/dog_astropad-4.png", 5],["testDogFrames/dog_astropad-5.png", 5],["testDogFrames/dog_astropad-6.png", 5],["testDogFrames/dog_astropad-7.png", 5],["testDogFrames/dog_astropad-8.png", 5],["testDogFrames/dog_astropad-9.png", 5],["testDogFrames/dog_astropad-10.png", 5],["testDogFrames/dog_astropad-11.png", 5],["testDogFrames/dog_astropad-12.png", 5],["testDogFrames/dog_astropad-13.png", 5],["testDogFrames/dog_astropad-14.png", 5],["testDogFrames/dog_astropad-15.png", 5],["testDogFrames/dog_astropad-16.png", 5],["testDogFrames/dog_astropad-17.png", 5],["testDogFrames/dog_astropad-18.png", 5],["testDogFrames/dog_astropad-19.png", 5],["testDogFrames/dog_astropad-20.png", 5]]
 
 def fillBG():
     """
@@ -30,11 +38,12 @@ class Sprite:
         else :
             self.size = size
         self.textureName = texture
-        self.texture = pygame.transform.scale(pygame.image.load(texture), size)
+        self.texture = pygame.transform.scale(pygame.image.load(self.textureName), self.size)
         self.rect = (self.texture).get_rect()
 
         self.coordPredictions = {} #a dictionnary where the path for animations will be stored
         self.sizePredictions = {} #a dictionnary where the size for animations will be stored
+        self.skinPredictions = {} #a dictionnary where the image for animations of the sprite will be stored
 
         self.isButton = isButton
         self.shape = shape
@@ -153,6 +162,7 @@ class Sprite:
         same as slide except the animation is smoother with an acceleration phase and a deceleration phase
         acceleration and deceleration make up a fifth of the time
         """
+        global frameCount
         t1 = int(slideFrameAmount/5)
         x1 = ((endcoords[0] - self.coords[0])/8, (endcoords[1] - self.coords[1])/8)
         v1 = ((endcoords[0] - self.coords[0])/(4*t1),(endcoords[1] - self.coords[1])/(4*t1))
@@ -167,6 +177,7 @@ class Sprite:
         same as slide except the animation is smoother with an acceleration phase and a deceleration phase
         acceleration and deceleration make up a third of the time
         """
+        global frameCount
         t1 = int(slideFrameAmount/3)
         x1 = ((endcoords[0] - self.coords[0])/4, (endcoords[1] - self.coords[1])/4)
         v1 = ((endcoords[0] - self.coords[0])/(2*t1),(endcoords[1] - self.coords[1])/(2*t1))
@@ -175,8 +186,6 @@ class Sprite:
             self.coordPredictions[str(slideFrameAmount+frameCount - i)] = (endcoords[0] - x1[0]*(i/t1)**2, endcoords[1] - x1[1]*(i/t1)**2)
         for i in range(t1, 2*t1+1):
             self.coordPredictions[str(i+frameCount)] = ((i-t1)*v1[0]+self.coords[0] + x1[0],(i-t1)*v1[1]+self.coords[1] + x1[1])
-
-
 
     def actualise(self):
         """
@@ -189,6 +198,9 @@ class Sprite:
         newSize = self.sizePredictions.get(str(frameCount))
         if newSize is not None:
             self.resize(newSize)
+        newTexture = self.skinPredictions.get(str(frameCount))
+        if newTexture is not None:
+            self.setSkin(newTexture)
 
     def pressChecker(self, mouseCoords):
         """
@@ -237,7 +249,24 @@ class Sprite:
                 if correctPosition:
                     self.onClick()
                     
+    def setSkin(self, newTexture):
+        """
+        sets new skin for sprite
+        """
+        self.textureName = newTexture
+        self.texture = pygame.transform.scale(pygame.image.load(self.textureName), self.size)
+        #self.rect = ((self.texture).get_rect()).move(self.coords[0], self.coords[1])
 
+
+    def startAnimation(self, animationList, delay = 0):
+        """
+        prepares the skins needed for an animation (animationList is a list of lists with the format [["image1.png",timeImage1IsDisplayed],[["image2.png",timeImage2IsDisplayed]]])
+        """
+        global frameCount
+        accumulator = delay + frameCount
+        for texture in animationList:
+            self.skinPredictions[str(accumulator)] = texture[0]
+            accumulator += texture[1]
 
 
 def refreshSprites():
@@ -296,21 +325,23 @@ while True:
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:  # Left mouse button
                 mouseIsClicked = False
-
     if frameCount == 0:
-        testBall = Sprite((300,300), True, size = (100,100), isButton = True)
-        print("did a thing")
+        testDog = Sprite((300,300), True, size = (116,100), texture = "testDogFrames/dog_astropad-0.png")
+        testDog.startAnimation(exampleAnimation, delay = 200)
+        #testBall = Sprite((300,300), True, size = (100,100), isButton = True)
+        #print("did a thing")
         #testBall.smoothSlideThird((600,600), slideFrameAmount = 40)
         #testBall.resizeSlide((200,200), slideFrameAmount = 60)
         #testBall.resize((200,200))
-        print("lol")
+        #print("lol")
 
 
     if frameCount == 200:
+        pass
         #testBall.resizeSlide((200,200), slideFrameAmount = 60)
         #testBall.teleport((600,600))
         #testBall.onClick()
-        print("other thing")
+        #print("other thing")
     print(frameCount)
     refreshSprites() 
     clickNpress()
